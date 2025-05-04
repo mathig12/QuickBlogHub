@@ -1,25 +1,15 @@
 @echo off
 echo Starting Content Publishing Platform...
 
-echo.
-echo Starting backend server...
-start cmd /k "call env\Scripts\activate && cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+cd backend
+echo Starting backend server on http://localhost:5000
+start "Content Publishing Platform Backend" uvicorn main:app --host 0.0.0.0 --port 5000 --reload
 
 echo.
-echo Starting frontend server...
-start cmd /k "cd frontend && npm start"
-
+echo Application is running!
 echo.
-echo Servers are starting up...
+echo Open your browser and navigate to: http://localhost:5000
 echo.
-echo Backend will be available at: http://localhost:8000
-echo Frontend will be available at: http://localhost:5000
+echo Press Ctrl+C in the server window to stop the application when you're done.
 echo.
-echo Press any key to shut down the servers when you're done.
 pause
-
-echo.
-echo Shutting down servers...
-taskkill /f /im cmd.exe /fi "WINDOWTITLE eq *npm start*"
-taskkill /f /im cmd.exe /fi "WINDOWTITLE eq *uvicorn*"
-echo Servers shut down.

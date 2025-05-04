@@ -1,0 +1,33 @@
+modules = ["python-3.11", "nodejs-20"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["libxcrypt"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Content Publishing Platform Backend"
+
+[[workflows.workflow]]
+name = "Content Publishing Platform Backend"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && uvicorn main:app --host 0.0.0.0 --port 5000 --reload"
+waitForPort = 5000
+
+[deployment]
+run = ["sh", "-c", "python -m pip install -r requirements.txt && cd backend && uvicorn main:app --host 0.0.0.0 --port 5000 --reload"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Publishing Platform</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header {
+            background-color: #343a40;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        .post-card {
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+        }
+        .post-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .status-badge {
+            font-size: 0.8em;
+            padding: 5px 10px;
+        }
+        .status-draft { background-color: #6c757d; }
+        .status-flagged { background-color: #dc3545; }
+        .status-approved { background-color: #28a745; }
+        .status-published { background-color: #007bff; }
+        .action-buttons {
+            margin-top: 15px;
+        }
+        .flagged-reasons {
+            background-color: #ffe6e6;
+            border-left: 4px solid #dc3545;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        #post-form textarea {
+            min-height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header text-center">
+        <div class="container">
+            <h1>Content Publishing Platform</h1>
+            <p class="lead">Create, moderate, and publish your content with AI assistance</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="row">
+            <!-- Left Column - Post List -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Posts</h5>
+                        <button class="btn btn-sm btn-primary" id="new-post-btn">
+                            <i class="fas fa-plus"></i> New Post
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group" id="post-list">
+                            <!-- Posts will be loaded here dynamically -->
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Filter by Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            <button class="list-group-item list-group-item-action active" data-filter="all">All Posts</button>
+                            <button class="list-group-item list-group-item-action" data-filter="draft">Drafts</button>
+                            <button class="list-group-item list-group-item-action" data-filter="flagged">Flagged</button>
+                            <button class="list-group-item list-group-item-action" data-filter="approved">Approved</button>
+                            <button class="list-group-item list-group-item-action" data-filter="published">Published</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column - Post Editor/Viewer -->
+            <div class="col-md-8">
+                <div class="card" id="post-editor-card">
+                    <div class="card-header">
+                        <h5 id="editor-title">Create New Post</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="post-form">
+                            <input type="hidden" id="post-id">
+                            <div class="mb-3">
+                                <label for="post-title" class="form-label">Title</label>
+                                <input type="text" class="form-control" id="post-title" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="post-content" class="form-label">Content</label>
+                                <textarea class="form-control" id="post-content" required></textarea>
+                            </div>
+                            <div id="status-container" class="mb-3 d-none">
+                                <label class="form-label">Status</label>
+                                <div>
+                                    <span id="status-badge" class="badge status-badge"></span>
+                                </div>
+                            </div>
+                            <div id="flagged-reasons-container" class="flagged-reasons mb-3 d-none">
+                                <strong>Flagged for:</strong>
+                                <p id="flagged-reasons-text"></p>
+                            </div>
+                            <div class="action-buttons">
+                                <button type="submit" class="btn btn-primary" id="save-button">Save Draft</button>
+                                <button type="button" class="btn btn-success d-none" id="review-button">Submit for Review</button>
+                                <button type="button" class="btn btn-info d-none" id="publish-button">Publish</button>
+                                <button type="button" class="btn btn-secondary" id="cancel-button">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card d-none" id="post-viewer-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 id="viewer-title"></h5>
+                        <div>
+                            <span id="viewer-status-badge" class="badge status-badge"></span>
+                            <button class="btn btn-sm btn-primary ms-2 d-none" id="edit-button">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="viewer-content"></div>
+                        <div id="viewer-flagged-reasons" class="flagged-reasons mt-3 d-none">
+                            <strong>Flagged for:</strong>
+                            <p id="viewer-flagged-reasons-text"></p>
+                        </div>
+                        <div class="action-buttons">
+                            <button type="button" class="btn btn-success d-none" id="viewer-review-button">Submit for Review</button>
+                            <button type="button" class="btn btn-info d-none" id="viewer-publish-button">Publish</button>
+                            <button type="button" class="btn btn-danger d-none" id="viewer-back-button">Back to List</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-light py-4 mt-5">
+        <div class="container text-center">
+            <p>Content Publishing Platform with AI Moderation</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Main JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const postList = document.getElementById('post-list');
+            const postForm = document.getElementById('post-form');
+            const postEditorCard = document.getElementById('post-editor-card');
+            const postViewerCard = document.getElementById('post-viewer-card');
+            
+            const postIdInput = document.getElementById('post-id');
+            const postTitleInput = document.getElementById('post-title');
+            const postContentInput = document.getElementById('post-content');
+            const statusContainer = document.getElementById('status-container');
+            const statusBadge = document.getElementById('status-badge');
+            const flaggedReasonsContainer = document.getElementById('flagged-reasons-container');
+            const flaggedReasonsText = document.getElementById('flagged-reasons-text');
+            
+            const saveButton = document.getElementById('save-button');
+            const reviewButton = document.getElementById('review-button');
+            const publishButton = document.getElementById('publish-button');
+            const cancelButton = document.getElementById('cancel-button');
+            const editButton = document.getElementById('edit-button');
+            
+            const viewerTitle = document.getElementById('viewer-title');
+            const viewerStatusBadge = document.getElementById('viewer-status-badge');
+            const viewerContent = document.getElementById('viewer-content');
+            const viewerFlaggedReasons = document.getElementById('viewer-flagged-reasons');
+            const viewerFlaggedReasonsText = document.getElementById('viewer-flagged-reasons-text');
+            const viewerReviewButton = document.getElementById('viewer-review-button');
+            const viewerPublishButton = document.getElementById('viewer-publish-button');
+            const viewerBackButton = document.getElementById('viewer-back-button');
+            
+            const newPostBtn = document.getElementById('new-post-btn');
+            const editorTitle = document.getElementById('editor-title');
+            const filterButtons = document.querySelectorAll('[data-filter]');
+            
+            let currentFilter = 'all';
+            let currentPostId = null;
+            
+            // Fetch all posts on page load
+            fetchPosts();
+            
+            // Event Listeners
+            newPostBtn.addEventListener('click', showPostEditor);
+            postForm.addEventListener('submit', savePost);
+            cancelButton.addEventListener('click', cancelEdit);
+            editButton.addEventListener('click', editPost);
+            reviewButton.addEventListener('click', submitForReview);
+            publishButton.addEventListener('click', publishPost);
+            viewerReviewButton.addEventListener('click', () => submitForReview(currentPostId));
+            viewerPublishButton.addEventListener('click', () => publishPost(currentPostId));
+            viewerBackButton.addEventListener('click', hidePostViewer);
+            
+            filterButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentFilter = e.target.dataset.filter;
+                    fetchPosts(currentFilter !== 'all' ? currentFilter : null);
+                });
+            });
+            
+            // Functions
+            function fetchPosts(status = null) {
+                postList.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+                
+                let url = '/posts/';
+                if (status) {
+                    url += `?status=${status}`;
+                }
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(posts => {
+                        postList.innerHTML = '';
+                        
+                        if (posts.length === 0) {
+                            postList.innerHTML = '<p class="text-center text-muted">No posts found</p>';
+                            return;
+                        }
+                        
+                        posts.forEach(post => {
+                            const postItem = document.createElement('a');
+                            postItem.href = '#';
+                            postItem.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                            postItem.innerHTML = `
+                                <div>
+                                    <h6 class="mb-1">${post.title}</h6>
+                                    <small class="text-muted">${new Date(post.created_at).toLocaleString()}</small>
+                                </div>
+                                <span class="badge status-badge status-${post.status}">${post.status}</span>
+                            `;
+                            postItem.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                viewPost(post.id);
+                            });
+                            postList.appendChild(postItem);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching posts:', error);
+                        postList.innerHTML = '<p class="text-center text-danger">Error loading posts</p>';
+                    });
+            }
+            
+            function viewPost(postId) {
+                fetch(`/posts/${postId}`)
+                    .then(response => response.json())
+                    .then(post => {
+                        currentPostId = post.id;
+                        
+                        viewerTitle.textContent = post.title;
+                        viewerStatusBadge.textContent = post.status;
+                        viewerStatusBadge.className = `badge status-badge status-${post.status}`;
+                        viewerContent.innerHTML = post.content.replace(/\n/g, '<br>');
+                        
+                        // Show flagged reasons if applicable
+                        if (post.status === 'flagged' && post.flagged_reasons) {
+                            viewerFlaggedReasons.classList.remove('d-none');
+                            viewerFlaggedReasonsText.textContent = post.flagged_reasons;
+                        } else {
+                            viewerFlaggedReasons.classList.add('d-none');
+                        }
+                        
+                        // Configure buttons based on post status
+                        editButton.classList.toggle('d-none', post.status === 'published');
+                        viewerReviewButton.classList.toggle('d-none', post.status !== 'draft');
+                        viewerPublishButton.classList.toggle('d-none', post.status !== 'approved');
+                        viewerBackButton.classList.remove('d-none');
+                        
+                        postEditorCard.classList.add('d-none');
+                        postViewerCard.classList.remove('d-none');
+                    })
+                    .catch(error => {
+                        console.error('Error fetching post:', error);
+                        alert('Failed to load post details');
+                    });
+            }
+            
+            function showPostEditor(editMode = false) {
+                if (!editMode) {
+                    // New post mode
+                    editorTitle.textContent = 'Create New Post';
+                    postIdInput.value = '';
+                    postTitleInput.value = '';
+                    postContentInput.value = '';
+                    statusContainer.classList.add('d-none');
+                    flaggedReasonsContainer.classList.add('d-none');
+                    reviewButton.classList.add('d-none');
+                    publishButton.classList.add('d-none');
+                    saveButton.textContent = 'Save Draft';
+                }
+                
+                postViewerCard.classList.add('d-none');
+                postEditorCard.classList.remove('d-none');
+                postTitleInput.focus();
+            }
+            
+            function editPost() {
+                fetch(`/posts/${currentPostId}`)
+                    .then(response => response.json())
+                    .then(post => {
+                        editorTitle.textContent = 'Edit Post';
+                        postIdInput.value = post.id;
+                        postTitleInput.value = post.title;
+                        postContentInput.value = post.content;
+                        
+                        statusBadge.textContent = post.status;
+                        statusBadge.className = `badge status-badge status-${post.status}`;
+                        statusContainer.classList.remove('d-none');
+                        
+                        if (post.status === 'flagged' && post.flagged_reasons) {
+                            flaggedReasonsContainer.classList.remove('d-none');
+                            flaggedReasonsText.textContent = post.flagged_reasons;
+                        } else {
+                            flaggedReasonsContainer.classList.add('d-none');
+                        }
+                        
+                        // Configure buttons based on post status
+                        reviewButton.classList.toggle('d-none', post.status !== 'draft');
+                        publishButton.classList.toggle('d-none', post.status !== 'approved');
+                        saveButton.textContent = 'Update Post';
+                        
+                        showPostEditor(true);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching post for edit:', error);
+                        alert('Failed to load post for editing');
+                    });
+            }
+            
+            function savePost(event) {
+                event.preventDefault();
+                
+                const postData = {
+                    title: postTitleInput.value,
+                    content: postContentInput.value
+                };
+                
+                if (postIdInput.value) {
+                    // Update existing post
+                    fetch(`/posts/${postIdInput.value}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(postData)
+                    })
+                    .then(response => response.json())
+                    .then(post => {
+                        alert('Post updated successfully!');
+                        fetchPosts(currentFilter !== 'all' ? currentFilter : null);
+                        viewPost(post.id);
+                    })
+                    .catch(error => {
+                        console.error('Error updating post:', error);
+                        alert('Failed to update post');
+                    });
+                } else {
+                    // Create new post
+                    fetch('/posts/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(postData)
+                    })
+                    .then(response => response.json())
+                    .then(post => {
+                        alert('Post created successfully!');
+                        fetchPosts(currentFilter !== 'all' ? currentFilter : null);
+                        viewPost(post.id);
+                    })
+                    .catch(error => {
+                        console.error('Error creating post:', error);
+                        alert('Failed to create post');
+                    });
+                }
+            }
+            
+            function submitForReview(postId = null) {
+                const id = postId || postIdInput.value;
+                
+                fetch(`/posts/${id}/submit/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(post => {
+                    alert('Post submitted for review!');
+                    fetchPosts(currentFilter !== 'all' ? currentFilter : null);
+                    viewPost(post.id);
+                })
+                .catch(error => {
+                    console.error('Error submitting post for review:', error);
+                    alert('Failed to submit post for review');
+                });
+            }
+            
+            function publishPost(postId = null) {
+                const id = postId || postIdInput.value;
+                
+                fetch(`/posts/${id}/publish/`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(post => {
+                    alert('Post published successfully!');
+                    fetchPosts(currentFilter !== 'all' ? currentFilter : null);
+                    viewPost(post.id);
+                })
+                .catch(error => {
+                    console.error('Error publishing post:', error);
+                    alert('Failed to publish post');
+                });
+            }
+            
+            function cancelEdit() {
+                if (currentPostId) {
+                    viewPost(currentPostId);
+                } else {
+                    postEditorCard.classList.add('d-none');
+                    fetchPosts(currentFilter !== 'all' ? currentFilter : null);
+                }
+            }
+            
+            function hidePostViewer() {
+                postViewerCard.classList.add('d-none');
+                fetchPosts(currentFilter !== 'all' ? currentFilter : null);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+Design and implement a Content Publishing Platform where users can create and publish short blog posts. The twist? Before
+publishing, posts are automatically reviewed by an AI moderation service, which flags inappropriate content based on keywords,
+length, or tone.
+This system combines:
+A FastAPI backend with SQLite
+A ReactJS frontend
+A Python SDK (via OpenAPI Generator CLI)
+Pre-publish moderation logic with trick constraints
+Automation scripts ( setupdev.bat , runapplication.bat )
+
+Tasks & Requirements
+1. Backend Development (FastAPI & SQLite)
+Implement the following endpoints:
+1. POST /posts/ → Create a new draft blog post.
+2. POST /posts/{post_id}/submit/ → Submit the post for review (returns status: approved or flagged ).
+3. GET /posts/ → List all posts (filter by status : draft, flagged, approved, published).
+4. PATCH /posts/{post_id}/publish/ → Publish a post (only if approved).
+5. GET /posts/{post_id} → View a specific post.
+
+🚨 Trick Logic in Backend (Hidden Complexity)
+Moderation checks include:
+🚫 Block banned words (e.g., profanity, insults – use a sample list).
+📏 Minimum and maximum content length (e.g., 50–2000 characters).
+🤖 AI tone detection (simulate basic logic — reject overly aggressive or all-caps content).
+Posts must be "approved" before being published.
+Users should receive clear feedback on why a post was flagged.
+Once published, posts become read-only.
+📌 Examples:
+✅ A 300-character blog post with polite tone → approved
+❌ A 20-character all-caps post → flagged: too short + aggressive tone ❌ A post with profanity → flagged: banned words detected
+✅ Only approved posts can be marked as published
+
+2. Database Schema (SQLite)
+1 CREATE TABLE posts (
+2 id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+Use Alembic for schema versioning
+Provide a seed_data.sql file with example flagged and approved posts
+
+3. Frontend (ReactJS)
+Users should be able to:
+1. Create a draft post (title + content)
+2. Submit a post for review and see feedback ( approved , flagged + reasons )
+3. See list of their posts, filtered by status
+4. Publish an approved post
+5. Read published posts (read-only view)
+Use Axios for API interaction.
+Minimal styling is fine — clarity is key.
+
+4. Python SDK (OpenAPI Generator)
+Generate the SDK:
+
+Sample SDK Usage:
+
+Include a sample script that demonstrates moderation and publishing.
+
+5. Setup Script ( setupdev.bat )
+3 title TEXT NOT NULL,
+4 content TEXT NOT NULL,
+5 status TEXT CHECK (status IN ('draft', 'flagged', 'approved', 'published')) NOT NULL DEFAULT 'draft',
+6 flagged_reasons TEXT,
+7 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+8 );
+9
+
+1 openapi-generator-cli generate -i http://localhost:8000/openapi.json -g python -o moderation_sdk
+2
+
+1 from moderation_sdk.api.posts_api import PostsApi
+2 from moderation_sdk import ApiClient
+3 client = ApiClient()
+4 api = PostsApi(client)
+5 # Submit a draft post for review
+6 api.submit_post_for_review(post_id=1)
+7
+
+1 @echo off
+2 echo Setting up backend...
+3 python -m venv env
+4 call env\Scripts\activate
+5 pip install -r requirements.txt
+6 alembic upgrade head
+7 echo Setting up frontend...
+8 cd frontend
+9 npm install
+
+6. Run Script ( runapplication.bat )
+
+Evaluation Criteria
+✅ Smart moderation logic (banned words, tone detection, length validation)
+✅ Clear status flow: draft → approved/flagged → published
+✅ SDK usage works for programmatic moderation/publishing
+✅ Clean, working UI
+✅ Setup and run scripts functional
+✅ Unit tests for moderation logic ✅ README documentation included
+
+Deliverables
+FastAPI backend
+SQLite DB + Alembic migrations
+ReactJS frontend
+Python SDK + sample script
+Setup and run scripts
+Unit tests
+README

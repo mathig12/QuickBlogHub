@@ -4,7 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from datetime import datetime
 import os
 from pathlib import Path
 
@@ -100,8 +101,18 @@ def submit_post_for_review(post_id: int, db: Session = Depends(get_db)):
     if post.status != "draft":
         raise HTTPException(status_code=400, detail="Only draft posts can be submitted for review")
     
-    # Run moderation checks
+    # Run enhanced moderation checks
     moderation_result = moderation.check_content(post.content, post.title)
+    
+    # Store the quality score
+    post.quality_score = moderation_result.get("quality_score", 0)
+    
+    # Store full moderation data for advanced features
+    post.moderation_data = moderation_result
+    
+    # Store warnings as comma-separated string
+    if moderation_result.get("warnings"):
+        post.warnings = ", ".join(moderation_result["warnings"])
     
     if moderation_result["approved"]:
         post.status = "approved"
@@ -125,7 +136,10 @@ def publish_post(post_id: int, db: Session = Depends(get_db)):
     if post.status != "approved":
         raise HTTPException(status_code=400, detail="Only approved posts can be published")
     
+    # Update status and set published timestamp
     post.status = "published"
+    post.published_at = datetime.now()
+    
     db.commit()
     db.refresh(post)
     return post
@@ -150,10 +164,53 @@ def update_post(post_id: int, post_update: schemas.PostUpdate, db: Session = Dep
         db_post.title = post_update.title
     if post_update.content is not None:
         db_post.content = post_update.content
+    if post_update.tags is not None:
+        db_post.tags = post_update.tags
+    
+    # Clear any previous moderation data when content is updated
+    if post_update.content is not None:
+        db_post.moderation_data = None
+        db_post.quality_score = None
+        db_post.warnings = None
+        db_post.flagged_reasons = None
     
     db.commit()
     db.refresh(db_post)
     return db_post
+
+
+@app.get("/stats/", response_model=schemas.PostStats)
+def get_post_stats(db: Session = Depends(get_db)):
+    """Get statistics about posts in the platform."""
+    total = db.query(models.Post).count()
+    draft = db.query(models.Post).filter(models.Post.status == "draft").count()
+    flagged = db.query(models.Post).filter(models.Post.status == "flagged").count()
+    approved = db.query(models.Post).filter(models.Post.status == "approved").count()
+    published = db.query(models.Post).filter(models.Post.status == "published").count()
+    
+    return {
+        "total": total,
+        "draft": draft,
+        "flagged": flagged,
+        "approved": approved,
+        "published": published
+    }
+
+
+@app.get("/posts/{post_id}/ai-suggestions/", response_model=Dict[str, List[str]])
+def get_ai_suggestions(post_id: int, db: Session = Depends(get_db)):
+    """Get AI-powered suggestions for improving a post."""
+    post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Generate suggestions if they don't exist yet
+    if not post.moderation_data or "suggestions" not in post.moderation_data:
+        suggestions = moderation.generate_improvement_suggestions(post.content, post.title)
+    else:
+        suggestions = post.moderation_data["suggestions"]
+    
+    return suggestions
 
 
 @app.get("/", response_class=HTMLResponse)
